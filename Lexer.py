@@ -26,6 +26,7 @@ TOKENS = {
     '>': "GT",
     '->': "FNARROW",
     ',': "SEP",
+    'bool': "BOOL",
     'key': "KEY",
     'int': "INT",
     'float': "FLOAT",
@@ -35,6 +36,8 @@ TOKENS = {
 }
 
 KEYWORDS = {
+    'TRUE': "true",
+    'FALSE': "false",
     'VAR': "set",
     'NOT': "not",
     'OR': "or",
@@ -75,13 +78,13 @@ class Lexer:
             if dot_count == 1 and self.current_char == '.':
                 self.pos.advance(self.current_char)
                 pos_end = self.pos.copy()
-                self.error = SyntaxError_("multiple decimal points", pos_start, pos_end)
+                self.error = SyntaxError_("multiple decimal points", pos_start=pos_start, pos_end=pos_end)
                 return
             elif self.current_char == '.':
                 next_char = self.pos.peek()
                 if next_char is None or next_char not in NUMBERS:
                     self.pos.advance(self.current_char)
-                    self.error = SyntaxError_("invalid syntax", pos_start, self.pos)
+                    self.error = SyntaxError_("invalid syntax", pos_start=pos_start, pos_end=self.pos)
                     return
                 dot_count += 1
             num += self.text[self.pos.idx]
@@ -96,6 +99,7 @@ class Lexer:
         str_val = ''
         pos_start = self.pos.copy()
         escape = False
+        quote = self.current_char
         self.pos.advance()
         escape_lst = {
             'n': "\n",
@@ -107,7 +111,7 @@ class Lexer:
 
         while self.pos.idx < len(self.text):
             self.current_char = self.text[self.pos.idx]
-            if self.current_char == '"' and not escape:
+            if self.current_char == quote and not escape:
                 break
 
             if escape:
@@ -121,7 +125,7 @@ class Lexer:
             self.pos.advance(self.current_char)
 
         if self.pos.idx >= len(self.text):
-            self.error = SyntaxError_("Unterminated string", pos_start, self.pos)
+            self.error = SyntaxError_("Unterminated string", pos_start=pos_start, pos_end=self.pos)
             return
 
         self.pos.advance(self.current_char)
@@ -133,16 +137,19 @@ class Lexer:
         
         if self.text[self.pos.idx] == '_':
             self.pos.advance(self.current_char)
-            self.error = SyntaxError_("variable cannot begin with '_'", pos_start, self.pos)
+            self.error = SyntaxError_("variable cannot begin with '_'", pos_start=pos_start, pos_end=self.pos)
             return
 
         while self.pos.idx < len(self.text) and self.text[self.pos.idx] in NUM_LET:
             self.current_char = self.text[self.pos.idx]
             ident += self.text[self.pos.idx]
             self.pos.advance(self.current_char)
-        
+
         if ident in self.keyword_vals:
-            self.tokens.append((TOKENS['key'], ident, (pos_start, self.pos)))
+            if ident in (KEYWORDS['TRUE'], KEYWORDS['FALSE']):
+                self.tokens.append((TOKENS['bool'], ident, (pos_start, self.pos)))
+            else:
+                self.tokens.append((TOKENS['key'], ident, (pos_start, self.pos)))
         else:
             self.tokens.append((TOKENS['var'], ident, (pos_start, self.pos)))
 
@@ -164,20 +171,26 @@ class Lexer:
                 self.identifier_lex()
                 continue
 
-            if self.current_char in ('"'):
+            if self.current_char in ('"', '\''):
                 self.string_lex()
                 if self.error:
                     break
                 continue
 
+            if self.current_char in ('<', '>', '=', '!', '-'):
+                pos_start = self.pos.copy()
+                token = self.current_char
+                next_char = self.pos.peek()
+                if next_char and token + next_char in TOKENS:
+                    token += next_char
+                    self.pos.advance(self.current_char)
+                self.pos.advance(self.current_char)
+                self.tokens.append((TOKENS[token], token, (pos_start, self.pos)))
+                continue
+
             if self.current_char in TOKENS:
                 pos_start = self.pos.copy()
                 token = self.current_char
-                if self.current_char in ('<', '>', '=', '!', '-'):
-                    next_char = self.pos.peek()
-                    if next_char in ('=', '>'):
-                        token = self.current_char + next_char
-                        self.pos.advance(self.current_char)
                 self.pos.advance(self.current_char)
                 self.tokens.append((TOKENS[token], token, (pos_start, self.pos)))
                 continue
@@ -191,7 +204,7 @@ class Lexer:
                 self.pos.advance(self.text[self.pos.idx])
 
             pos_end = self.pos.copy()
-            self.error = IllegalCharacter_(f"'{illegal_str}'", pos_start, pos_end)
+            self.error = IllegalCharacter_(f"'{illegal_str}'", pos_start=pos_start, pos_end=pos_end)
             break
         
         self.tokens.append((TOKENS['eof'], None, (self.pos.copy(), self.pos.copy())))

@@ -4,6 +4,8 @@ from .Value import Value
 from .Context import Context
 from .Lexer import TOKENS, KEYWORDS
 
+null = "nil"
+
 class Number(Value):
     def __init__(self, value):
         super().__init__()
@@ -13,19 +15,19 @@ class Number(Value):
         if isinstance(other, Number):
             return Number(self.value + other.value).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
         
     def sub(self, other):
         if isinstance(other, Number):
             return Number(self.value - other.value).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
     
     def mul(self, other):
         if isinstance(other, Number):
             return Number(self.value * other.value).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
     
     def div(self, other):
         if isinstance(other, Number):
@@ -36,61 +38,61 @@ class Number(Value):
                 self.error = RTError("ZeroDivisionError", "Division By Zero" ,context=self.context, pos_start=start, pos_end=end)
                 return None, self.error
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
 
     def pow(self, other):
         if isinstance(other, Number):
             return Number(self.value ** other.value).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
 
     def compare_ee(self, other):
         if isinstance(other, Number):
             return Number(int(self.value == other.value)).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
         
     def compare_ne(self, other):
         if isinstance(other, Number):
             return Number(int(self.value != other.value)).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
         
     def compare_lt(self, other):
         if isinstance(other, Number):
             return Number(int(self.value < other.value)).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
         
     def compare_gt(self, other):
         if isinstance(other, Number):
             return Number(int(self.value > other.value)).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
         
     def compare_le(self, other):
         if isinstance(other, Number):
             return Number(int(self.value <= other.value)).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
         
     def compare_ge(self, other):
         if isinstance(other, Number):
             return Number(int(self.value >= other.value)).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
 
     def and_(self, other):
         if isinstance(other, Number):
             return Number(int(self.value and other.value)).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
         
     def or_(self, other):
         if isinstance(other, Number):
             return Number(int(self.value or other.value)).set_Context(self.context), None
         else:
-            return None, Value.illegal_op(self.start_pos, other.end_pos)
+            return None, Value.illegal_op(self, other)
 
     def not_(self):
         return Number(1 if self.value == 0 else 0).set_Context(self.context), None
@@ -107,6 +109,52 @@ class Number(Value):
 
     def __repr__(self):
         return str(self.value)
+
+class Bool(Value):
+    def __init__(self, value):
+        super().__init__()
+        self.value = value
+        self.bvalue = True if self.value == KEYWORDS['TRUE'] else False
+
+    def and_(self, other):
+        if isinstance(other, Bool):
+            return Bool(self.bvalue and other.true_()).set_Context(self.context), None
+        else:
+            return None, Value.illegal_op(self, other)
+        
+    def or_(self, other):
+        if isinstance(other, Bool):
+            return Bool(self.bvalue or other.true_()).set_Context(self.context), None
+        else:
+            return None, Value.illegal_op(self, other)
+        
+    def not_(self):
+        return Bool(not self.bvalue).set_Context(self.context), None
+    
+    def compare_ee(self, other):
+        if isinstance(other, Bool):
+            return Bool(self.bvalue == other.true_()).set_Context(self.context), None
+        else:
+            return None, Value.illegal_op(self, other)
+        
+    def compare_ne(self, other):
+        if isinstance(other, Bool):
+            return Bool(self.bvalue != other.true_()).set_Context(self.context), None
+        else:
+            return None, Value.illegal_op(self, other)
+        
+    def true_(self):
+        return self.bvalue
+    
+    def copy(self):
+        copy = Bool(self.value)
+        copy.set_Pos(self.start_pos, self.end_pos)
+        copy.set_Context(self.context)
+
+        return copy
+    
+    def __repr__(self):
+        return KEYWORDS['TRUE'] if self.value else KEYWORDS['FALSE']
 
 class String(Value):
     def __init__(self, value):
@@ -135,7 +183,7 @@ class String(Value):
         return copy
     
     def __repr__(self):
-        return f'"{self.value}"'
+        return f'{self.value}'
 
 class Function(Value):
     def __init__(self, fn_name, main_node, args):
@@ -176,9 +224,7 @@ class Function(Value):
         return f"<function {self.name}>"
 
 Global_Symbol_Table = SymbolTable()
-Global_Symbol_Table.set("nil", Number(0))
-Global_Symbol_Table.set("false", Number(0))
-Global_Symbol_Table.set("true", Number(1))
+Global_Symbol_Table.set(null, Number(0))
 
 class Interpreter:
     def exec(self, node, context):
@@ -191,6 +237,9 @@ class Interpreter:
     
     def handle_NumberNode(self, node, context):
         return Number(node.tok[1]).set_Context(context).set_Pos(node.pos_start, node.pos_end), None
+
+    def handle_BoolNode(self, node, context):
+        return Bool(node.tok[1]).set_Context(context).set_Pos(node.pos_start, node.pos_end), None
 
     def handle_StringNode(self, node, context):
         return String(node.tok[1]).set_Context(context).set_Pos(node.pos_start, node.pos_end), None
@@ -253,7 +302,7 @@ class Interpreter:
         value = context.symbol_table.get(var)
 
         if not value:
-            error = RTError("Runtime Error", f"{var} is not defined", context, node.pos_start, node.pos_end)
+            error = RTError("RuntimeError", f"{var} is not defined", context, node.pos_start, node.pos_end)
             return None, error
         
         value = value.copy().set_Pos(node.pos_start, node.pos_end)
@@ -263,6 +312,7 @@ class Interpreter:
         var = node.var_tok[1]
         value, error = self.exec(node.value_node, context)
         if error: return None, error
+
 
         context.symbol_table.set(var, value)
         return value, None

@@ -12,6 +12,16 @@ class NumberNode:
     def __repr__(self):
         return f'{self.tok[0]}:{self.tok[1]}'
 
+class BoolNode:
+    def __init__(self, token):
+        self.tok = token
+
+        self.pos_start = self.tok[2][0]
+        self.pos_end = self.tok[2][1]
+
+    def __repr__(self):
+        return f'{self.tok[0]}:{self.tok[1]}'
+
 class StringNode:
     def __init__(self, token):
         self.tok = token
@@ -366,6 +376,11 @@ class Parser:
             result.register_advance()
             self.advance()
             return result.ok(NumberNode(tok))
+        
+        if tok[0] == TOKENS['bool']:
+            result.register_advance()
+            self.advance()
+            return result.ok(BoolNode(tok))
 
         if tok[0] == TOKENS['str']:
             result.register_advance()
