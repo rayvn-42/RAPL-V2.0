@@ -1,0 +1,35 @@
+[project]
+name = "rapl-2"
+version = "0.1.0"
+description = "A dynamically-typed interpreted programming language built in Python."
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+
+authors = [
+    { name = "Rayan Berrabah" }
+]
+
+keywords = [
+    "programming-language",
+    "interpreter",
+    "compiler",
+    "lexer",
+    "parser",
+    "ast",
+    "language-design",
+    "python",
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+]
+
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/rayvn-42/RAPL-V2.0"
+Repository = "https://github.com/rayvn-42/RAPL-V2.0"
